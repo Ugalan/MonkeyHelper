@@ -162,14 +162,14 @@ public class HvHelper {
 	
     public Window getFocusedWindow(){
         // return DeviceBridge.loadWindows(ihvDevice, iDevice)[DeviceBridge.getFocusedWindow(iDevice)];
-        return getWindow(_view.getFocusedWindowName(), CompareType.Equals); // 待解决：未考虑多个窗体名一样的情况
+        return getWindow(_view.getFocusedWindowName(), CompType.Equals); // 待解决：未考虑多个窗体名一样的情况
     }
     
     public ViewNode getRootNode(){
         return DeviceBridge.loadWindowData( new Window(new ViewServerDevice(_iDevice), "", 0xffffffff));
     }
 	
-	private static Window getWindow(String windowName, CompareType ct) {
+	private static Window getWindow(String windowName, CompType ct) {
         IDevice iDevice = null;	
         iDevice = getDevice(0);
         System.out.println(String.format("IDevice Name = 【%s】", iDevice.getName()) );
@@ -213,13 +213,13 @@ public class HvHelper {
 		return HvStr.NULL;
 	}
 	
-	public String getProperty(ViewNode node, P propertyName) {		
-		return getProperty(node, propertyName.value);
+	public String getProperty(ViewNode node, P ppyName) {		
+		return getProperty(node, ppyName.value);
 	}
 	
 	public ViewNode findNodeByWindow(String windowName) {
 		// "io.selendroid.testapp/io.selendroid.testapp.HomeScreenActivity"
-        return DeviceBridge.loadWindowData(getWindow(windowName, CompareType.Equals));         
+        return DeviceBridge.loadWindowData(getWindow(windowName, CompType.Equals));         
 	}
 	
 	public static boolean isMatch(String str, String regex) {
@@ -281,7 +281,7 @@ public class HvHelper {
 				&& (regex.length() == rIdx || regex.length() == rIdx + 1 && regex.charAt(rIdx) == '*');
 	}
 	
-	public static boolean Compare(String expectStr, String realStr, CompareType ct)
+	public static boolean Compare(String expectStr, String realStr, CompType ct)
     {
         switch (ct) {
             case Equals: {
@@ -308,34 +308,35 @@ public class HvHelper {
         return HierarchyViewer.getAbsolutePositionOfView(node);  
 	}
 	
-    private List<ViewNode> findNodesByProperty(ViewNode parNode, P property, String expectValue, CompareType ct, List<ViewNode> outNodes){    	
-        if (Compare(expectValue, getProperty(parNode, property), ct)){
+    private void findNodesByPpy( P ppyName, ViewNode parNode, String expcVal, CompType ct, List<ViewNode> outNodes){    	
+        if (Compare(expcVal, getProperty(parNode, ppyName), ct)){
         	outNodes.add(parNode);
-        }        
+        }
         
         for (ViewNode child : parNode.children) {
-            ViewNode found = findNodeByProperty(child, property, expectValue, ct);
+            ViewNode found = findNodeByPpy(ppyName, child, expcVal, ct);
             if (found != null) {
             	outNodes.add(found);
             }
         }
         
+        // return outNodes;
+    }
+	
+    public List<ViewNode> findNodesByPp( P ppyName, ViewNode parNode, String expcVal, CompType ct){
+    	List<ViewNode> outNodes = new ArrayList<>();        
+        findNodesByPpy(ppyName, parNode, expcVal, ct, outNodes);
         return outNodes;
     }
 	
-    public List<ViewNode> findNodesByProperty(ViewNode parNode, P property, String expectValue, CompareType ct){
-    	List<ViewNode> nodeList = new ArrayList<>();        
-        return findNodesByProperty(parNode, property, expectValue, ct, nodeList);
-    }
-	
-    public ViewNode findNodeByProperty(ViewNode parNode, P property, String expectValue, CompareType ct){
+    public ViewNode findNodeByPpy(P ppyName, ViewNode parNode, String expcVal, CompType ct){
     	// this.left = this.namedProperties.containsKey("mLeft") ? this.getInt("mLeft", 0) : this.getInt("layout:mLeft", 0);
-        if (Compare(expectValue, getProperty(parNode, property), ct)){
+        if (Compare(expcVal, getProperty(parNode, ppyName), ct)){
         	return parNode;
         }        
         
         for (ViewNode child : parNode.children) {
-            ViewNode found = findNodeByProperty(child, property, expectValue, ct);
+            ViewNode found = findNodeByPpy(ppyName, child, expcVal, ct);
             if (found != null) {
                 return found;
             }
@@ -344,27 +345,37 @@ public class HvHelper {
         return null;
     }
     
-    public ViewNode findNodeByProperty(String windowName, P property, String expectValue, CompareType ct){
+    public ViewNode findNodeByPpy(P ppyName, String expcVal, CompType ct){
+    	ViewNode parNode = this.getRootNode();
+    	return findNodeByPpy(ppyName, parNode, expcVal, ct);
+    }
+    
+    public ViewNode findNodeByPpy(P ppyName, String windowName, String expcVal, CompType ct){
     	ViewNode parNode = this.findNodeByWindow(windowName);        
-        return findNodeByProperty(parNode, property, expectValue, ct);
+        return findNodeByPpy(ppyName, parNode, expcVal, ct);
+    }
+    
+    public ViewNode findNodeByPpy(P ppyName, String parId, String windowName, String expcVal, CompType ct){
+    	ViewNode parNode = this.findNodeById(parId, windowName);        
+        return findNodeByPpy(ppyName, parNode, expcVal, ct);
     }
     
     
     /** 根据ViewNode的公共变量获取ViewNode
      * @param parNode
      * @param fieldName
-     * @param expectValue
+     * @param expcVal
      * @param ct
      * @return
      * @throws Exception
      */
-    public ViewNode findNodeByField(ViewNode parNode, F fieldName, String expectValue, CompareType ct) throws Exception {
-        if (Compare(expectValue, parNode.getClass().getField(fieldName.value).toString(), ct)){
+    public ViewNode findNodeByField(ViewNode parNode, F fieldName, String expcVal, CompType ct) throws Exception {
+        if (Compare(expcVal, parNode.getClass().getField(fieldName.value).toString(), ct)){
             return parNode;
         }
         
         for (ViewNode child : parNode.children) {
-            ViewNode found = findNodeByField(child, fieldName, expectValue, ct);
+            ViewNode found = findNodeByField(child, fieldName, expcVal, ct);
             if (found != null) {
                 return found;
             }
@@ -374,7 +385,7 @@ public class HvHelper {
     }
 	
     public ViewNode findNodeByClass(ViewNode parNode, String className) throws Exception {
-        return findNodeByField(parNode, F.name, className, CompareType.Equals);
+        return findNodeByField(parNode, F.name, className, CompType.Equals);
     }
     
     public ViewNode findNodeById(String nodeId) {
@@ -385,20 +396,42 @@ public class HvHelper {
         return _view.findViewById(nodeId, parNode);
     }
     
-    public ViewNode findNodeById(String windowName, String nodeId){
-        Window window = getWindow(windowName, CompareType.Contains);
+    public ViewNode findNodeById( String nodeId, String windowName){
+        Window window = getWindow(windowName, CompType.Contains);
         ViewNode rootNode = DeviceBridge.loadWindowData(window);
         return findNodeById(nodeId, rootNode);
     }
 
-    public ViewNode findNodeById(String windowName, String nodeId, String parId){
+    public ViewNode findNodeById(String nodeId, String parId, String windowName){
     	ViewNode parNode = findNodeById(windowName, parId);
     	return findNodeById(nodeId, parNode);
+    }
+    
+    public ViewNode findNodeByText(String text) {
+    	return this.findNodeByPpy(P.text_mText, text, CompType.Equals);
+    }
+
+    public ViewNode findNodeByText(String text, ViewNode parNode){
+    	return this.findNodeByPpy(P.text_mText, parNode, text, CompType.Equals);
+    }
+    
+    public ViewNode findNodeByText( String text, String windowName){
+    	return this.findNodeByPpy(P.text_mText, windowName, text, CompType.Equals);
+    }
+
+    public ViewNode findNodeByText(String text, String parId, String windowName){
+    	return this.findNodeByPpy(P.text_mText, parId, windowName, text, CompType.Equals);
     }
 
     public ViewNode tryFindNodeByIdTr(String parId, String nodeId){
         return null;
     }
+    
+    public ViewNode findNodeByPpy2(P ppyName) {
+    	//return this.findNodeByProperty(parNode, property, expectValue, ct)(nodeId);
+    	return null;
+    }
+
 	
 	public static void drag(int startx, int starty, int endx, int endy, int steps, long ms)  throws Exception{
         final long iterationTime = ms / steps;

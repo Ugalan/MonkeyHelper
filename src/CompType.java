@@ -1,5 +1,5 @@
 
-public enum CompareType {
+public enum CompType {
     Equals,
     Contains,
     Asterisk;
