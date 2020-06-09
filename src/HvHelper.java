@@ -308,13 +308,13 @@ public class HvHelper {
         return HierarchyViewer.getAbsolutePositionOfView(node);  
 	}
 	
-    private void findNodesByPpy( P ppyName, ViewNode parNode, String expcVal, CompType ct, List<ViewNode> outNodes){    	
+    private void findNodesByPpy( String expcVal, ViewNode parNode, P ppyName, CompType ct, List<ViewNode> outNodes){    	
         if (Compare(expcVal, getProperty(parNode, ppyName), ct)){
         	outNodes.add(parNode);
         }
         
         for (ViewNode child : parNode.children) {
-            ViewNode found = findNodeByPpy(ppyName, child, expcVal, ct);
+            ViewNode found = findNodeByPpy(expcVal, child, ppyName, ct);
             if (found != null) {
             	outNodes.add(found);
             }
@@ -323,20 +323,20 @@ public class HvHelper {
         // return outNodes;
     }
 	
-    public List<ViewNode> findNodesByPp( P ppyName, ViewNode parNode, String expcVal, CompType ct){
+    public List<ViewNode> findNodesByPp( String expcVal, ViewNode parNode, P ppyName, CompType ct){
     	List<ViewNode> outNodes = new ArrayList<>();        
-        findNodesByPpy(ppyName, parNode, expcVal, ct, outNodes);
+        findNodesByPpy(expcVal, parNode, ppyName, ct, outNodes);
         return outNodes;
     }
 	
-    public ViewNode findNodeByPpy(P ppyName, ViewNode parNode, String expcVal, CompType ct){
+    public ViewNode findNodeByPpy(String expcVal,  ViewNode parNode, P ppyName, CompType ct){
     	// this.left = this.namedProperties.containsKey("mLeft") ? this.getInt("mLeft", 0) : this.getInt("layout:mLeft", 0);
         if (Compare(expcVal, getProperty(parNode, ppyName), ct)){
         	return parNode;
         }        
         
         for (ViewNode child : parNode.children) {
-            ViewNode found = findNodeByPpy(ppyName, child, expcVal, ct);
+            ViewNode found = findNodeByPpy(expcVal, child, ppyName, ct);
             if (found != null) {
                 return found;
             }
@@ -345,19 +345,19 @@ public class HvHelper {
         return null;
     }
     
-    public ViewNode findNodeByPpy(P ppyName, String expcVal, CompType ct){
+    public ViewNode findNodeByPpy(String expcVal, P ppyName, CompType ct){
     	ViewNode parNode = this.getRootNode();
-    	return findNodeByPpy(ppyName, parNode, expcVal, ct);
+    	return findNodeByPpy(expcVal, parNode, ppyName, ct);
     }
     
-    public ViewNode findNodeByPpy(P ppyName, String windowName, String expcVal, CompType ct){
+    public ViewNode findNodeByPpy(String expcVal, String windowName, P ppyName,  CompType ct){
     	ViewNode parNode = this.findNodeByWindow(windowName);        
-        return findNodeByPpy(ppyName, parNode, expcVal, ct);
+        return findNodeByPpy(expcVal, parNode, ppyName, ct);
     }
     
-    public ViewNode findNodeByPpy(P ppyName, String parId, String windowName, String expcVal, CompType ct){
+    public ViewNode findNodeByPpy(String expcVal, String parId, String windowName, P ppyName, CompType ct){
     	ViewNode parNode = this.findNodeById(parId, windowName);        
-        return findNodeByPpy(ppyName, parNode, expcVal, ct);
+        return findNodeByPpy(expcVal, parNode, ppyName, ct);
     }
     
     
@@ -408,30 +408,24 @@ public class HvHelper {
     }
     
     public ViewNode findNodeByText(String text) {
-    	return this.findNodeByPpy(P.text_mText, text, CompType.Equals);
+    	return this.findNodeByPpy(text, P.text_mText, CompType.Equals);
     }
 
     public ViewNode findNodeByText(String text, ViewNode parNode){
-    	return this.findNodeByPpy(P.text_mText, parNode, text, CompType.Equals);
+    	return this.findNodeByPpy(text, parNode, P.text_mText, CompType.Equals);
     }
     
     public ViewNode findNodeByText( String text, String windowName){
-    	return this.findNodeByPpy(P.text_mText, windowName, text, CompType.Equals);
+    	return this.findNodeByPpy(text, windowName, P.text_mText, CompType.Equals);
     }
 
     public ViewNode findNodeByText(String text, String parId, String windowName){
-    	return this.findNodeByPpy(P.text_mText, parId, windowName, text, CompType.Equals);
+    	return this.findNodeByPpy( text, parId, windowName, P.text_mText, CompType.Equals);
     }
 
     public ViewNode tryFindNodeByIdTr(String parId, String nodeId){
         return null;
     }
-    
-    public ViewNode findNodeByPpy2(P ppyName) {
-    	//return this.findNodeByProperty(parNode, property, expectValue, ct)(nodeId);
-    	return null;
-    }
-
 	
 	public static void drag(int startx, int starty, int endx, int endy, int steps, long ms)  throws Exception{
         final long iterationTime = ms / steps;
