@@ -17,6 +17,7 @@ import com.android.chimpchat.ChimpManager;
 import com.android.chimpchat.adb.AdbBackend;
 import com.android.chimpchat.adb.AdbChimpDevice;
 import com.android.chimpchat.core.IChimpImage;
+import com.android.chimpchat.core.TouchPressType;
 import com.android.chimpchat.hierarchyviewer.HierarchyViewer;
 import com.android.ddmlib.AndroidDebugBridge;
 import com.android.ddmlib.IDevice;
@@ -27,6 +28,9 @@ import com.android.hierarchyviewerlib.device.ViewServerDevice;
 import com.android.hierarchyviewerlib.models.ViewNode;
 import com.android.hierarchyviewerlib.models.Window;
 import com.android.hierarchyviewerlib.models.ViewNode.Property;
+import com.android.monkeyrunner.MonkeyDevice;
+import com.android.monkeyrunner.easy.EasyMonkeyDevice;
+// import com.android.monkeyrunner.easy.By;
 
 /**
  * @author Ugalan
@@ -36,7 +40,7 @@ import com.android.hierarchyviewerlib.models.ViewNode.Property;
  * @author Ugalan
  *
  */
-public class HvHelper {
+public class HvHelper implements IFindsById, ISearchContext{
 	class ChimpManagerEx extends ChimpManager {
 		public ChimpManagerEx(Socket monkeySocket) throws IOException {
 			super(monkeySocket);
@@ -46,6 +50,7 @@ public class HvHelper {
 	
 	private String _sn = null;
 	public AdbChimpDevice _device = null;
+	public static EasyMonkeyDevice _mDevice = null;
 	private AdbBackend _adb = null;
 	private HierarchyViewer _view = null;
 	static ChimpManager _mgr = null;
@@ -60,6 +65,7 @@ public class HvHelper {
 	public void initDevice() throws Exception {
         _adb = new AdbBackend(); 
         _device = (AdbChimpDevice) _adb.waitForConnection(10000, _sn);
+        _mDevice = new EasyMonkeyDevice(new MonkeyDevice(_device));
         _mgr = _device.getManager(); // .tap(250, 250);
         _view = _device.getHierarchyViewer();
         _iDevice = getIDevice(_sn);
@@ -310,6 +316,13 @@ public class HvHelper {
     	List<ViewNode> outNodes = new ArrayList<>();        
         findNodesByPpy(expcVal, parNode, ppyName, ct, outNodes);
         return outNodes;
+    }   
+    
+    public List<ViewNode> findNodesById( String nodeId){
+    	List<ViewNode> outNodes = new ArrayList<>();
+    	ViewNode parNode = this.getRootNode();
+        findNodesByPpy(nodeId, parNode, P.mID, CompType.Equals, outNodes);
+        return outNodes;
     }    
     
     private boolean isNodeMatch( ViewNode node, NodeLocMap locMap){    	
@@ -497,6 +510,23 @@ public class HvHelper {
         }
         
         return null;
+    }
+    
+	public ViewNode findNode(By by) {
+		return by.findNode((ISearchContext)this);
+	}
+
+	public List<ViewNode> findNodes(By by) {
+		// TODO 自动生成的方法存根
+		return null;
+	}
+	
+	/*public ViewNode findNode(By by)  throws Exception{
+		return by.findNode(this);
+    }*/
+    
+	public static void touch(String nodeId)  throws Exception{
+		// _mDevice.touch(By.id(nodeId), TouchPressType.DOWN_AND_UP);
     }
 	
 	public static void drag(int startx, int starty, int endx, int endy, int steps, long ms)  throws Exception{

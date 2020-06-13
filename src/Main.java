@@ -34,8 +34,9 @@ public class Main{
         while(null != (line = br.readLine())) {
          }*/        
 		hvh = new HvHelper("127.0.0.1:21503"); // åÐÒ£Ä£ÄâÆ÷
-		
-		ViewNode node = hvh.findNodeById(Id.list);
+		ViewNode node = hvh.findNode(By.id(Id.showToastButton));
+		System.out.println(node.id);
+		/*ViewNode node = hvh.findNodeById(Id.list);
 		NodeLocInfo locInfo_00_Id = new NodeLocInfo(Id.list, P.mID, CompType.Equals);
 		NodeLocInfo locInfo_01_Id = new NodeLocInfo(Id.text1, P.mID, CompType.Equals);
 		// NodeLocInfo locInfo_01_Text = new NodeLocInfo("Media", P.text_mText, CompType.Equals);
@@ -52,7 +53,7 @@ public class Main{
 		locMaps.add(locMap_01);
 		List<ViewNode> outNodes = hvh.findNodesByMaps(node, locMaps);
 		
-		System.out.println(outNodes.size());
+		System.out.println(outNodes.size());*/
         System.out.println("________________________________________________TEST PASS______________________________________________________");
     }
 	
