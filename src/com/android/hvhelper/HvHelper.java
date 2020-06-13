@@ -424,8 +424,7 @@ public class HvHelper implements IFinds, ISearchContext{
     public ViewNode findNodeByPpy(String expcVal, String parId, String windowName, P ppyName, CompType ct){
     	ViewNode parNode = this.findNodeById(parId, windowName);        
         return findNodeByPpy(expcVal, parNode, ppyName, ct);
-    }
-    
+    }    
     
     /** 根据ViewNode的公共变量获取ViewNode
      * @param parNode
@@ -470,6 +469,26 @@ public class HvHelper implements IFinds, ISearchContext{
 
     public ViewNode findNodeById(String nodeId, String parId, String windowName){
     	ViewNode parNode = findNodeById(windowName, parId);
+    	return findNodeById(nodeId, parNode);
+    }
+    
+    public ViewNode findNodeById(String nodeId, String locId, int parNum){
+    	ViewNode parNode = findNodeById(locId);
+    	
+    	for (int i=0; i<parNum; i++){
+    		parNode = parNode.parent;
+    	}
+    	
+    	return findNodeById(nodeId, parNode);
+    }
+    
+    public ViewNode findNodeByText(String nodeId, String text, int parNum){
+    	ViewNode parNode = findNodeByText(text);
+    	
+    	for (int i=0; i<parNum; i++){
+    		parNode = parNode.parent;
+    	}
+    	
     	return findNodeById(nodeId, parNode);
     }
     

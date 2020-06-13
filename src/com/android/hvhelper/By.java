@@ -9,6 +9,14 @@ public class By {
 	protected Function<ISearchContext, ViewNode> findNodeMethod;
 	protected Function<ISearchContext, List<ViewNode>> findNodesMethod;		
 
+    public ViewNode findNode(ISearchContext iContext) {
+    	return findNodeMethod.apply(iContext);
+    }
+    
+    public List<ViewNode> findNodes(ISearchContext iContext) {
+    	return findNodesMethod.apply(iContext);
+    }
+    
     public static By id(String nodeId) {
     	return new By(){
     		{
@@ -24,13 +32,5 @@ public class By {
     			findNodeMethod = context -> ((IFinds) context).findNodeByText(text);
     		}    		
     	};
-    }
-    
-    public ViewNode findNode(ISearchContext iContext) {
-    	return findNodeMethod.apply(iContext);
-    }
-    
-    public List<ViewNode> findNodes(ISearchContext iContext) {
-    	return findNodesMethod.apply(iContext);
     }
 }
