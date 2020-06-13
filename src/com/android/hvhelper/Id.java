@@ -1,3 +1,4 @@
+package com.android.hvhelper;
 
 public class Id {
 	public static String my_text_field = "id/my_text_field";

@@ -1,3 +1,4 @@
+package com.android.hvhelper;
 
 public enum C {
 	android_widget_FrameLayout("android.widget.FrameLayout");

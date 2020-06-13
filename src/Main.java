@@ -24,6 +24,9 @@ import com.android.hierarchyviewerlib.device.HvDeviceFactory;
 import com.android.hierarchyviewerlib.device.IHvDevice;
 import com.android.hierarchyviewerlib.models.ViewNode;
 import com.android.hierarchyviewerlib.models.ViewNode.Property;
+import com.android.hvhelper.By;
+import com.android.hvhelper.HvHelper;
+import com.android.hvhelper.Id;
 import com.android.hierarchyviewerlib.models.Window;
 
 public class Main{    
@@ -35,6 +38,7 @@ public class Main{
          }*/        
 		hvh = new HvHelper("127.0.0.1:21503"); // åÐÒ£Ä£ÄâÆ÷
 		ViewNode node = hvh.findNode(By.id(Id.showToastButton));
+		// ViewNode node = hvh.findNode(By.text("Displays a Toast"));
 		System.out.println(node.id);
 		/*ViewNode node = hvh.findNodeById(Id.list);
 		NodeLocInfo locInfo_00_Id = new NodeLocInfo(Id.list, P.mID, CompType.Equals);

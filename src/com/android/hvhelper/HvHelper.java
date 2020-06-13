@@ -1,3 +1,4 @@
+package com.android.hvhelper;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ import com.android.monkeyrunner.easy.EasyMonkeyDevice;
  * @author Ugalan
  *
  */
-public class HvHelper implements IFindsById, ISearchContext{
+public class HvHelper implements IFinds, ISearchContext{
 	class ChimpManagerEx extends ChimpManager {
 		public ChimpManagerEx(Socket monkeySocket) throws IOException {
 			super(monkeySocket);
@@ -158,7 +159,7 @@ public class HvHelper implements IFindsById, ISearchContext{
     }
     
     public ViewNode getRootNode(){
-        return DeviceBridge.loadWindowData( new Window(new ViewServerDevice(_iDevice), "", 0xffffffff));
+        return DeviceBridge.loadWindowData(new Window(new ViewServerDevice(_iDevice), "", -1)); // 0xffffffff
     }
 	
 	private static Window getWindow(String windowName, CompType ct) {
@@ -196,10 +197,12 @@ public class HvHelper implements IFindsById, ISearchContext{
 	}
 	
 	public String getProperty(ViewNode node, String propertyName) {
-		Map<String, Property> nodeInfo = node.namedProperties;
-		
-		if (nodeInfo.containsKey(propertyName)){
-			return nodeInfo.get(propertyName).value;
+		if (node != null){
+			Map<String, Property> nodeInfo = node.namedProperties;
+			
+			if (nodeInfo.containsKey(propertyName)){
+				return nodeInfo.get(propertyName).value;
+			}
 		}
 		
 		return HvStr.NULL;
@@ -432,7 +435,7 @@ public class HvHelper implements IFindsById, ISearchContext{
      * @return
      * @throws Exception
      */
-    public ViewNode findNodeByField(ViewNode parNode, F fieldName, String expcVal, CompType ct) throws Exception {
+    public ViewNode findNodeByField(ViewNode parNode, W fieldName, String expcVal, CompType ct) throws Exception {
         if (Compare(expcVal, parNode.getClass().getField(fieldName.value).toString(), ct)){
             return parNode;
         }
@@ -448,7 +451,7 @@ public class HvHelper implements IFindsById, ISearchContext{
     }
 	
     public ViewNode findNodeByClass(ViewNode parNode, String className) throws Exception {
-        return findNodeByField(parNode, F.name, className, CompType.Equals);
+        return findNodeByField(parNode, W.name, className, CompType.Equals);
     }
     
     public ViewNode findNodeById(String nodeId) {
@@ -517,13 +520,8 @@ public class HvHelper implements IFindsById, ISearchContext{
 	}
 
 	public List<ViewNode> findNodes(By by) {
-		// TODO 自动生成的方法存根
-		return null;
+		return by.findNodes((ISearchContext)this);
 	}
-	
-	/*public ViewNode findNode(By by)  throws Exception{
-		return by.findNode(this);
-    }*/
     
 	public static void touch(String nodeId)  throws Exception{
 		// _mDevice.touch(By.id(nodeId), TouchPressType.DOWN_AND_UP);
