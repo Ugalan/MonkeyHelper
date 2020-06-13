@@ -2,9 +2,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,14 +26,46 @@ import com.android.hierarchyviewerlib.models.ViewNode;
 import com.android.hierarchyviewerlib.models.ViewNode.Property;
 import com.android.hierarchyviewerlib.models.Window;
 
-public class Main{
-
-    
+public class Main{    
+	public static HvHelper hvh = null;
 	public static void main(String[] args) throws Exception{
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		/*BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         String line = "";
-        /*while(null != (line = br.readLine())) {
+        while(null != (line = br.readLine())) {
          }*/        
+		hvh = new HvHelper("127.0.0.1:21503"); // åÐÒ£Ä£ÄâÆ÷
+		
+		ViewNode node = hvh.findNodeById(Id.list);
+		NodeLocInfo locInfo_00_Id = new NodeLocInfo(Id.list, P.mID, CompType.Equals);
+		NodeLocInfo locInfo_01_Id = new NodeLocInfo(Id.text1, P.mID, CompType.Equals);
+		// NodeLocInfo locInfo_01_Text = new NodeLocInfo("Media", P.text_mText, CompType.Equals);
+		
+		NodeLocMap locMap_00 = new NodeLocMap();
+		locMap_00.add(locInfo_00_Id);
+		
+		NodeLocMap locMap_01 = new NodeLocMap();
+		locMap_01.add(locInfo_01_Id);
+		// locMap_01.locInfo.add(locInfo_01_Text);		
+		
+		List<NodeLocMap> locMaps = new ArrayList<>();
+		locMaps.add(locMap_00);
+		locMaps.add(locMap_01);
+		List<ViewNode> outNodes = hvh.findNodesByMaps(node, locMaps);
+		
+		System.out.println(outNodes.size());
         System.out.println("________________________________________________TEST PASS______________________________________________________");
-    }	
+    }
+	
+	public void monkeyTest() {        
+		hvh._device.touch(250, 250, com.android.chimpchat.core.TouchPressType.DOWN_AND_UP); 
+        IChimpImage img = hvh._device.takeSnapshot();
+        String strHigh = hvh._device.getProperty("display.height");
+        DeviceBridge.initDebugBridge("adb.exe");
+        AndroidDebugBridge.init(false);
+		AndroidDebugBridge bridge = AndroidDebugBridge.createBridge();        	
+        IDevice[] iDevices = bridge.getDevices();
+        for (IDevice item : iDevices){
+        	System.out.println(String.format("IDevice Name = ¡¾%s¡¿", item.getName()) );	
+        }
+	}
 }

@@ -45,7 +45,7 @@ public class HvHelper {
 	}
 	
 	private String _sn = null;
-	private AdbChimpDevice _device = null;
+	public AdbChimpDevice _device = null;
 	private AdbBackend _adb = null;
 	private HierarchyViewer _view = null;
 	static ChimpManager _mgr = null;
@@ -57,28 +57,14 @@ public class HvHelper {
 		initDevice() ;
 	}
 	
-	public void monkeyTest() {        
-        _device.touch(250, 250, com.android.chimpchat.core.TouchPressType.DOWN_AND_UP); 
-        IChimpImage img = _device.takeSnapshot();
-        String strHigh = _device.getProperty("display.height");
-        DeviceBridge.initDebugBridge("D:\\A3pool\\AndroidSDK\\platform-tools\\adb.exe");
-        DeviceBridge.initDebugBridge("adb.exe");
-        AndroidDebugBridge.init(false);
-		AndroidDebugBridge bridge = AndroidDebugBridge.createBridge();        	
-        IDevice[] iDevices = bridge.getDevices();
-        for (IDevice item : iDevices){
-        	System.out.println(String.format("IDevice Name = 【%s】", item.getName()) );	
-        }
-	}
-	
 	public void initDevice() throws Exception {
         _adb = new AdbBackend(); 
-        _device = (AdbChimpDevice) _adb.waitForConnection(10000, "127.0.0.1:21503"); // 逍遥模拟器
+        _device = (AdbChimpDevice) _adb.waitForConnection(10000, _sn);
         _mgr = _device.getManager(); // .tap(250, 250);
         _view = _device.getHierarchyViewer();
         _iDevice = getIDevice(_sn);
         _ihvDevice = HvDeviceFactory.create(_iDevice);
-        _ihvDevice.initializeViewDebug();
+        // _ihvDevice.initializeViewDebug();
 	}
 	
     public void clearEnv()
@@ -314,20 +300,84 @@ public class HvHelper {
         }
         
         for (ViewNode child : parNode.children) {
-            ViewNode found = findNodeByPpy(expcVal, child, ppyName, ct);
-            if (found != null) {
-            	outNodes.add(found);
-            }
+        	findNodesByPpy(expcVal, child, ppyName, ct, outNodes);
         }
         
         // return outNodes;
     }
 	
-    public List<ViewNode> findNodesByPp( String expcVal, ViewNode parNode, P ppyName, CompType ct){
+    public List<ViewNode> findNodesByPpy( String expcVal, ViewNode parNode, P ppyName, CompType ct){
     	List<ViewNode> outNodes = new ArrayList<>();        
         findNodesByPpy(expcVal, parNode, ppyName, ct, outNodes);
         return outNodes;
+    }    
+    
+    private boolean isNodeMatch( ViewNode node, NodeLocMap locMap){    	
+    	for (NodeLocInfo locInfo : locMap.locInfo){ // 多种属性定位一个节点
+            if (!Compare(locInfo.expcVal, getProperty(node, locInfo.p), locInfo.ct)){
+            	return false;
+            }               
+    	}        
+    	
+        return true;
     }
+    
+    public void findNodesByMap( ViewNode parNode, NodeLocMap locMap, List<ViewNode> outNodes){
+        if (isNodeMatch(parNode, locMap)){
+        	outNodes.add(parNode);
+        }
+        
+        for (ViewNode child : parNode.children) {
+        	findNodesByMap(child, locMap, outNodes);
+        }
+    }
+    
+    public List<ViewNode> findNodesByMap( ViewNode parNode, NodeLocMap locMap){
+    	List<ViewNode> outNodes = new ArrayList<>();        
+    	findNodesByMap( parNode, locMap, outNodes);
+        return outNodes;
+    }
+    
+    public void findNodesByMaps( ViewNode parNode, List<NodeLocMap> locMaps, int locIndex, List<ViewNode> outNodes){
+    	int mapSize = locMaps.size();
+    	int lastIndex = mapSize-1;
+        if (locIndex==lastIndex){
+        	List<ViewNode> curNodes = findNodesByMap(parNode, locMaps.get(lastIndex));
+        	outNodes.addAll(curNodes);
+        	return;
+        }
+    	
+		for (int i=locIndex; i<mapSize; i++){
+    		List<ViewNode> curNodes = findNodesByMap(parNode, locMaps.get(i));
+    		for (ViewNode node : curNodes){
+    			findNodesByMaps(node, locMaps, i+1, outNodes);
+    		}
+		}
+    }
+    
+    /**
+	* ViewNode node = hvh.findNodeById(Id.content);
+	* NodeLocInfo locInfo_00_Id = new NodeLocInfo(Id.visibleTestArea2, P.mID, CompType.Equals);
+	* NodeLocInfo locInfo_01_Id = new NodeLocInfo(Id.showToastButton, P.mID, CompType.Equals);
+	* NodeLocInfo locInfo_01_Text = new NodeLocInfo("Displays a Toast", P.text_mText, CompType.Equals);
+	*
+	* NodeLocMap locMap_00 = new NodeLocMap();
+	* locMap_00.locInfo.add(locInfo_00_Id);
+	*
+	* NodeLocMap locMap_01 = new NodeLocMap();
+	* locMap_01.locInfo.add(locInfo_01_Id);
+	* locMap_01.locInfo.add(locInfo_01_Text);		
+	*
+	* List<NodeLocMap> locMaps = new ArrayList<>();
+	* locMaps.add(locMap_00);
+	* locMaps.add(locMap_01);
+	* List<ViewNode> outNodes = hvh.findNodesByMaps(node, locMaps);
+    * */
+    public List<ViewNode> findNodesByMaps( ViewNode parNode, List<NodeLocMap> locMaps){
+    	List<ViewNode> outNodes = new ArrayList<>();        
+    	findNodesByMaps( parNode, locMaps, 0, outNodes);
+        return outNodes;
+    }    
 	
     public ViewNode findNodeByPpy(String expcVal,  ViewNode parNode, P ppyName, CompType ct){
     	// this.left = this.namedProperties.containsKey("mLeft") ? this.getInt("mLeft", 0) : this.getInt("layout:mLeft", 0);
@@ -422,8 +472,30 @@ public class HvHelper {
     public ViewNode findNodeByText(String text, String parId, String windowName){
     	return this.findNodeByPpy( text, parId, windowName, P.text_mText, CompType.Equals);
     }
-
-    public ViewNode tryFindNodeByIdTr(String parId, String nodeId){
+    
+    public ViewNode tryFindNodeById(String nodeId, int intervalMs, int times, boolean ignoreE) throws Exception{
+    	ViewNode node = null;
+        for (int i=0; i<times; i++){
+        	try {
+            	node = this.findNodeById(nodeId);
+            	if (node != null){
+            		 return node;
+            	}
+            	// x<5
+            	// y=-0.108x^{2}+1.183x+0
+            	// y=-0.4(x-2.23)^{2}+1.98 = 5.81s
+            	// y=-0.3(x)^{2}+1.5x = 6s
+            	// Thread.sleep((long) (-0.4*(i-2.23)*(i-2.23)+1.98)*1000); //_view.wait(intervalMs);.
+            	// Thread.sleep((long) (-0.3*i*i+1.5*i)*1000);
+            	Thread.sleep(intervalMs); //_view.wait(intervalMs);.
+        	} catch (Exception e) {
+        	}
+        }
+        
+        if (!ignoreE){
+        	throw new NoSuchNodeException();
+        }
+        
         return null;
     }
 	
