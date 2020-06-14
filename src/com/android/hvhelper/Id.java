@@ -1,5 +1,9 @@
 package com.android.hvhelper;
 
+/**
+ * @author Ugalan
+ * ¿Ø¼þID
+ */
 public class Id {
 	public static String my_text_field = "id/my_text_field";
 	public static String showToastButton = "id/showToastButton";

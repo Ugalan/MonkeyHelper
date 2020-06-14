@@ -9,6 +9,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 
 import com.android.chimpchat.ChimpManager;
@@ -38,6 +39,8 @@ public class Main{
          }*/        
 		hvh = new HvHelper("127.0.0.1:21503"); // åÐÒ£Ä£ÄâÆ÷
 		ViewNode node = hvh.findNode(By.id(Id.showToastButton));
+		Image img = hvh.captureNode(node);
+		hvh.saveImg("d:/test.jpg", img);
 		// ViewNode node = hvh.findNode(By.text("Displays a Toast"));
 		System.out.println(node.id);
 		/*ViewNode node = hvh.findNodeById(Id.list);

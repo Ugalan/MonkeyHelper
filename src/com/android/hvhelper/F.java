@@ -2,13 +2,13 @@ package com.android.hvhelper;
 
 /**
  * @author Ugalan
- * 控件所属的类
+ * ViewNode类的字段
  */
-public enum C {
-	android_widget_FrameLayout("android.widget.FrameLayout");
+public enum F {
+	name("name");
 	
 	public final String value;
-	private C(String value){
+	private F(String value){
 		this.value = value;
 	}
 	

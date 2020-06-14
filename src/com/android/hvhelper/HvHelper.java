@@ -12,6 +12,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.graphics.Point;
 
 import com.android.chimpchat.ChimpManager;
@@ -22,6 +26,7 @@ import com.android.chimpchat.core.TouchPressType;
 import com.android.chimpchat.hierarchyviewer.HierarchyViewer;
 import com.android.ddmlib.AndroidDebugBridge;
 import com.android.ddmlib.IDevice;
+import com.android.ddmlib.RawImage;
 import com.android.hierarchyviewerlib.device.DeviceBridge;
 import com.android.hierarchyviewerlib.device.HvDeviceFactory;
 import com.android.hierarchyviewerlib.device.IHvDevice;
@@ -434,7 +439,7 @@ public class HvHelper implements IFinds, ISearchContext{
      * @return
      * @throws Exception
      */
-    public ViewNode findNodeByField(ViewNode parNode, W fieldName, String expcVal, CompType ct) throws Exception {
+    public ViewNode findNodeByField(ViewNode parNode, F fieldName, String expcVal, CompType ct) throws Exception {
         if (Compare(expcVal, parNode.getClass().getField(fieldName.value).toString(), ct)){
             return parNode;
         }
@@ -450,7 +455,7 @@ public class HvHelper implements IFinds, ISearchContext{
     }
 	
     public ViewNode findNodeByClass(ViewNode parNode, String className) throws Exception {
-        return findNodeByField(parNode, W.name, className, CompType.Equals);
+        return findNodeByField(parNode, F.name, className, CompType.Equals);
     }
     
     public ViewNode findNodeById(String nodeId) {
@@ -558,4 +563,17 @@ public class HvHelper implements IFinds, ISearchContext{
         }
         _mgr.touchUp(endx, endy);
     }
+	
+	public Image captureNode(ViewNode node) {
+		// IChimpImage img = _device.takeSnapshot();
+        // BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+        // img.dispose();
+		return DeviceBridge.loadCapture(node.window, node);
+	}
+	
+	public void saveImg(String fileName, Image img) {
+        ImageLoader imgLoader = new ImageLoader();   
+        imgLoader.data = new ImageData[] {img.getImageData()};   
+        imgLoader.save(fileName, SWT.IMAGE_JPEG);   
+	}
 }
