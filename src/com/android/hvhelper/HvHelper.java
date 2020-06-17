@@ -1,4 +1,11 @@
 package com.android.hvhelper;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.DirectColorModel;
+import java.awt.image.IndexColorModel;
+import java.awt.image.WritableRaster;
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -12,21 +19,29 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.ImageLoader;
+import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.RGB;
 
 import com.android.chimpchat.ChimpManager;
 import com.android.chimpchat.adb.AdbBackend;
 import com.android.chimpchat.adb.AdbChimpDevice;
+import com.android.chimpchat.core.ChimpImageBase;
 import com.android.chimpchat.core.IChimpImage;
 import com.android.chimpchat.core.TouchPressType;
 import com.android.chimpchat.hierarchyviewer.HierarchyViewer;
+import com.android.ddmlib.AdbCommandRejectedException;
 import com.android.ddmlib.AndroidDebugBridge;
 import com.android.ddmlib.IDevice;
 import com.android.ddmlib.RawImage;
+import com.android.ddmlib.TimeoutException;
 import com.android.hierarchyviewerlib.device.DeviceBridge;
 import com.android.hierarchyviewerlib.device.HvDeviceFactory;
 import com.android.hierarchyviewerlib.device.IHvDevice;
@@ -38,10 +53,6 @@ import com.android.monkeyrunner.MonkeyDevice;
 import com.android.monkeyrunner.easy.EasyMonkeyDevice;
 // import com.android.monkeyrunner.easy.By;
 
-/**
- * @author Ugalan
- *
- */
 /**
  * @author Ugalan
  *
@@ -431,7 +442,8 @@ public class HvHelper implements IFinds, ISearchContext{
         return findNodeByPpy(expcVal, parNode, ppyName, ct);
     }    
     
-    /** 根据ViewNode的公共变量获取ViewNode
+    /**
+     * 根据ViewNode的公共变量获取ViewNode
      * @param parNode
      * @param fieldName
      * @param expcVal
@@ -487,7 +499,7 @@ public class HvHelper implements IFinds, ISearchContext{
     	return findNodeById(nodeId, parNode);
     }
     
-    public ViewNode findNodeByText(String nodeId, String text, int parNum){
+    public ViewNode findNodeByIdEx(String nodeId, String text, int parNum){
     	ViewNode parNode = findNodeByText(text);
     	
     	for (int i=0; i<parNum; i++){
@@ -513,7 +525,7 @@ public class HvHelper implements IFinds, ISearchContext{
     	return this.findNodeByPpy( text, parId, windowName, P.text_mText, CompType.Equals);
     }
     
-    public ViewNode tryFindNodeById(String nodeId, int intervalMs, int times, boolean ignoreE) throws Exception{
+    public ViewNode tryFindNodeById(String nodeId, int intervalMs, int times, boolean ignoreEx) throws Exception{
     	ViewNode node = null;
         for (int i=0; i<times; i++){
         	try {
@@ -529,10 +541,13 @@ public class HvHelper implements IFinds, ISearchContext{
             	// Thread.sleep((long) (-0.3*i*i+1.5*i)*1000);
             	Thread.sleep(intervalMs); //_view.wait(intervalMs);.
         	} catch (Exception e) {
+        		if (i == times && !ignoreEx){
+        			throw e;
+        		}
         	}
         }
         
-        if (!ignoreE){
+        if (!ignoreEx){
         	throw new NoSuchNodeException();
         }
         
@@ -564,16 +579,93 @@ public class HvHelper implements IFinds, ISearchContext{
         _mgr.touchUp(endx, endy);
     }
 	
-	public Image captureNode(ViewNode node) {
-		// IChimpImage img = _device.takeSnapshot();
-        // BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
-        // img.dispose();
-		return DeviceBridge.loadCapture(node.window, node);
+	public class ChimpImageEx extends ChimpImageBase{
+		BufferedImage bi;
+		
+		@Override
+		public BufferedImage createBufferedImage() {
+			return bi;
+		}		
+		
+		public void initialBi (BufferedImage bi){
+			this.bi = bi;
+		}	
 	}
 	
-	public void saveImg(String fileName, Image img) {
+	/**
+	 * org.eclipse.swt.graphics.Image转换为java.awt.image.BufferedImage
+	 * @param data
+	 * @return
+	 */
+	public static BufferedImage imageToBuffer(ImageData data) {
+		ColorModel colorModel = null;
+		PaletteData palette = data.palette;
+		
+		if (palette.isDirect) {
+			colorModel = new DirectColorModel(data.depth, palette.redMask, palette.greenMask, palette.blueMask);
+			BufferedImage bufferedImage = new BufferedImage(colorModel,
+					colorModel.createCompatibleWritableRaster(data.width, data.height), false, null);
+			WritableRaster raster = bufferedImage.getRaster();
+			int[] pixelArray = new int[3];
+			
+			for (int y = 0; y < data.height; y++) {
+				for (int x = 0; x < data.width; x++) {
+					int pixel = data.getPixel(x, y);
+					RGB rgb = palette.getRGB(pixel);
+					pixelArray[0] = rgb.red;
+					pixelArray[1] = rgb.green;
+					pixelArray[2] = rgb.blue;
+					raster.setPixels(x, y, 1, 1, pixelArray);
+				}
+			}			
+			return bufferedImage;
+		} else {
+			RGB[] rgbs = palette.getRGBs();
+			byte[] red = new byte[rgbs.length];
+			byte[] green = new byte[rgbs.length];
+			byte[] blue = new byte[rgbs.length];
+			for (int i = 0; i < rgbs.length; i++) {
+				RGB rgb = rgbs[i];
+				red[i] = (byte) rgb.red;
+				green[i] = (byte) rgb.green;
+				blue[i] = (byte) rgb.blue;
+			}
+			if (data.transparentPixel != -1) {
+				colorModel = new IndexColorModel(data.depth, rgbs.length, red, green, blue, data.transparentPixel);
+			} else {
+				colorModel = new IndexColorModel(data.depth, rgbs.length, red, green, blue);
+			}
+			BufferedImage bufferedImage = new BufferedImage(colorModel,
+					colorModel.createCompatibleWritableRaster(data.width, data.height), false, null);
+			WritableRaster raster = bufferedImage.getRaster();
+			int[] pixelArray = new int[1];
+			
+			for (int y = 0; y < data.height; y++) {
+				for (int x = 0; x < data.width; x++) {
+					int pixel = data.getPixel(x, y);
+					pixelArray[0] = pixel;
+					raster.setPixel(x, y, pixelArray);
+				}
+			}
+			return bufferedImage;
+		}
+	}
+	
+	public static BufferedImage imageToBuffer(Image img) {
+		return imageToBuffer(img.getImageData());  
+	}
+	
+	public IChimpImage captureNode(ViewNode node) throws Exception {
+		Image img = DeviceBridge.loadCapture(node.window, node);
         ImageLoader imgLoader = new ImageLoader();   
-        imgLoader.data = new ImageData[] {img.getImageData()};   
-        imgLoader.save(fileName, SWT.IMAGE_JPEG);   
+        imgLoader.data = new ImageData[] {img.getImageData()};
+        /*String fileName = "temp.jpg";
+        imgLoader.save(fileName, SWT.IMAGE_JPEG);
+        BufferedImage bi = ImageIO.read(new File(fileName));*/
+        BufferedImage bi = imageToBuffer(img);
+        ChimpImageEx bix = new ChimpImageEx();
+        bix.initialBi(bi);
+        
+        return bix;
 	}
 }

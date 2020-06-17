@@ -39,8 +39,11 @@ public class Main{
          }*/        
 		hvh = new HvHelper("127.0.0.1:21503"); // åÐÒ£Ä£ÄâÆ÷
 		ViewNode node = hvh.findNode(By.id(Id.showToastButton));
-		Image img = hvh.captureNode(node);
-		hvh.saveImg("d:/test.jpg", img);
+		// Image img = hvh.captureNode(node);
+		// hvh.saveImg("d:/test.jpg", img);
+		IChimpImage iimg = hvh.captureNode(node);
+		iimg.writeToFile("d:/test333.jpg", "png");
+		
 		// ViewNode node = hvh.findNode(By.text("Displays a Toast"));
 		System.out.println(node.id);
 		/*ViewNode node = hvh.findNodeById(Id.list);
