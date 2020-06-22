@@ -28,6 +28,8 @@ import com.android.hierarchyviewerlib.models.ViewNode.Property;
 import com.android.hvhelper.By;
 import com.android.hvhelper.HvHelper;
 import com.android.hvhelper.Id;
+import com.android.hvhelper.NodeLocMap;
+import com.android.hvhelper.Ref;
 import com.android.hierarchyviewerlib.models.Window;
 
 public class Main{    
@@ -38,14 +40,23 @@ public class Main{
         while(null != (line = br.readLine())) {
          }*/        
 		hvh = new HvHelper("127.0.0.1:21503"); // åÐÒ£Ä£ÄâÆ÷
-		ViewNode node = hvh.findNode(By.id(Id.showToastButton));
+		Ref byRef = new Ref();
+		// ViewNode node = null;
+		// node = hvh.findNode(By.id(Id.showToastButton));
+		if (hvh.isNodeVisibility(By.id(Id.showToastButton), byRef)){
+			hvh.touch(byRef.node);
+		}
+		
+		// NodeLocMap locMap_00 = new NodeLocMap();
+		
 		// Image img = hvh.captureNode(node);
 		// hvh.saveImg("d:/test.jpg", img);
-		IChimpImage iimg = hvh.captureNode(node);
-		iimg.writeToFile("d:/test333.jpg", "png");
+		
+		// IChimpImage iimg = hvh.captureNode(node);
+		// iimg.writeToFile("d:/test333.jpg", "png");
 		
 		// ViewNode node = hvh.findNode(By.text("Displays a Toast"));
-		System.out.println(node.id);
+		// System.out.println(node.id);
 		/*ViewNode node = hvh.findNodeById(Id.list);
 		NodeLocInfo locInfo_00_Id = new NodeLocInfo(Id.list, P.mID, CompType.Equals);
 		NodeLocInfo locInfo_01_Id = new NodeLocInfo(Id.text1, P.mID, CompType.Equals);

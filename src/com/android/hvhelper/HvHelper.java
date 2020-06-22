@@ -7,6 +7,7 @@ import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,6 +19,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -33,6 +36,7 @@ import org.eclipse.swt.graphics.RGB;
 import com.android.chimpchat.ChimpManager;
 import com.android.chimpchat.adb.AdbBackend;
 import com.android.chimpchat.adb.AdbChimpDevice;
+import com.android.chimpchat.adb.LoggingOutputReceiver;
 import com.android.chimpchat.core.ChimpImageBase;
 import com.android.chimpchat.core.IChimpImage;
 import com.android.chimpchat.core.TouchPressType;
@@ -52,16 +56,35 @@ import com.android.hierarchyviewerlib.models.ViewNode.Property;
 import com.android.monkeyrunner.MonkeyDevice;
 import com.android.monkeyrunner.easy.EasyMonkeyDevice;
 // import com.android.monkeyrunner.easy.By;
+import com.google.common.base.Preconditions;
 
 /**
  * @author Ugalan
  *
  */
-public class HvHelper implements IFinds, ISearchContext{
-	class ChimpManagerEx extends ChimpManager {
+public class HvHelper implements IFinds, ISearchContext{	
+	public class ChimpManagerEx extends ChimpManager {
 		public ChimpManagerEx(Socket monkeySocket) throws IOException {
 			super(monkeySocket);
-			// TODO 自动生成的构造函数存根
+		}
+		
+		@Override
+		public boolean sendMonkeyEvent(String command) throws IOException {
+			try {
+				return super.sendMonkeyEvent(command);
+			} catch (Exception e){
+				
+			}
+
+			return false;
+		}
+	}
+	
+	public class AdbChimpDeviceEx extends AdbChimpDevice {
+		private ChimpManagerEx manager;
+		
+		public AdbChimpDeviceEx(IDevice device) {
+			super(device);
 		}
 	}
 	
@@ -70,7 +93,7 @@ public class HvHelper implements IFinds, ISearchContext{
 	public static EasyMonkeyDevice _mDevice = null;
 	private AdbBackend _adb = null;
 	private HierarchyViewer _view = null;
-	static ChimpManager _mgr = null;
+	private static ChimpManagerEx _mgr = null;
 	public static IDevice _iDevice;
 	IHvDevice _ihvDevice = null;
 	
@@ -83,7 +106,14 @@ public class HvHelper implements IFinds, ISearchContext{
         _adb = new AdbBackend(); 
         _device = (AdbChimpDevice) _adb.waitForConnection(10000, _sn);
         _mDevice = new EasyMonkeyDevice(new MonkeyDevice(_device));
-        _mgr = _device.getManager(); // .tap(250, 250);
+        
+        // _mgr = _device.getManager();
+        _mgr = new ChimpManagerEx(_device.getManager().monkeySocket);
+        
+		/*InetAddress addr = InetAddress.getByName("127.0.0.1");
+		Socket monkeySocket = new Socket(addr, 12345);
+		_mgr = new ChimpManagerEx(monkeySocket);*/
+		
         _view = _device.getHierarchyViewer();
         _iDevice = getIDevice(_sn);
         _ihvDevice = HvDeviceFactory.create(_iDevice);
@@ -118,7 +148,7 @@ public class HvHelper implements IFinds, ISearchContext{
  
 		Callable<String> call = new Callable<String>() {
 			public String call() throws Exception {
-				_device = (AdbChimpDevice) _adb.waitForConnection(5000, "127.0.0.1:21503");
+				_device = (AdbChimpDeviceEx) _adb.waitForConnection(5000, "127.0.0.1:21503");
 				return "Done";
 			}
 		};
@@ -337,18 +367,21 @@ public class HvHelper implements IFinds, ISearchContext{
         return outNodes;
     }   
     
-    public List<ViewNode> findNodesById( String nodeId){
+    public List<ViewNode> findNodesById( String id){
     	List<ViewNode> outNodes = new ArrayList<>();
     	ViewNode parNode = this.getRootNode();
-        findNodesByPpy(nodeId, parNode, P.mID, CompType.Equals, outNodes);
+        findNodesByPpy(id, parNode, P.mID, CompType.Equals, outNodes);
         return outNodes;
     }    
     
     private boolean isNodeMatch( ViewNode node, NodeLocMap locMap){    	
     	for (NodeLocInfo locInfo : locMap.locInfo){ // 多种属性定位一个节点
-            if (!Compare(locInfo.expcVal, getProperty(node, locInfo.p), locInfo.ct)){
+    		boolean isFound = Compare(locInfo.expcVal, getProperty(node, locInfo.p), locInfo.ct);
+    		if (locMap.byAnyOne && isFound){ // 符合任一属性即返回
+    			return true;
+    		} else if (!isFound){
             	return false;
-            }               
+            }           
     	}        
     	
         return true;
@@ -470,43 +503,43 @@ public class HvHelper implements IFinds, ISearchContext{
         return findNodeByField(parNode, F.name, className, CompType.Equals);
     }
     
-    public ViewNode findNodeById(String nodeId) {
-    	return _view.findViewById(nodeId);
+    public ViewNode findNodeById(String id) {
+    	return _view.findViewById(id);
     }
 
-    public ViewNode findNodeById(String nodeId, ViewNode parNode){
-        return _view.findViewById(nodeId, parNode);
+    public ViewNode findNodeById(String id, ViewNode parNode){
+        return _view.findViewById(id, parNode);
     }
     
-    public ViewNode findNodeById( String nodeId, String windowName){
+    public ViewNode findNodeById( String id, String windowName){
         Window window = getWindow(windowName, CompType.Contains);
         ViewNode rootNode = DeviceBridge.loadWindowData(window);
-        return findNodeById(nodeId, rootNode);
+        return findNodeById(id, rootNode);
     }
 
-    public ViewNode findNodeById(String nodeId, String parId, String windowName){
+    public ViewNode findNodeById(String id, String parId, String windowName){
     	ViewNode parNode = findNodeById(windowName, parId);
-    	return findNodeById(nodeId, parNode);
+    	return findNodeById(id, parNode);
     }
     
-    public ViewNode findNodeById(String nodeId, String locId, int parNum){
+    public ViewNode findNodeById(String id, String locId, int parNum){
     	ViewNode parNode = findNodeById(locId);
     	
     	for (int i=0; i<parNum; i++){
     		parNode = parNode.parent;
     	}
     	
-    	return findNodeById(nodeId, parNode);
+    	return findNodeById(id, parNode);
     }
     
-    public ViewNode findNodeByIdEx(String nodeId, String text, int parNum){
-    	ViewNode parNode = findNodeByText(text);
+    public ViewNode findNodeById(String id, String text, int parNum, CompType textCt){
+    	ViewNode parNode = findNodeByPpy(text, P.text_mText, textCt);
     	
     	for (int i=0; i<parNum; i++){
     		parNode = parNode.parent;
     	}
     	
-    	return findNodeById(nodeId, parNode);
+    	return findNodeById(id, parNode);
     }
     
     public ViewNode findNodeByText(String text) {
@@ -517,7 +550,11 @@ public class HvHelper implements IFinds, ISearchContext{
     	return this.findNodeByPpy(text, parNode, P.text_mText, CompType.Equals);
     }
     
-    public ViewNode findNodeByText( String text, String windowName){
+    public ViewNode findNodeByText( String text, String parId){
+    	return this.findNodeByPpy(text, parId, P.text_mText, CompType.Equals);
+    }
+    
+    public ViewNode findNodeByTextW( String text, String windowName){
     	return this.findNodeByPpy(text, windowName, P.text_mText, CompType.Equals);
     }
 
@@ -525,11 +562,11 @@ public class HvHelper implements IFinds, ISearchContext{
     	return this.findNodeByPpy( text, parId, windowName, P.text_mText, CompType.Equals);
     }
     
-    public ViewNode tryFindNodeById(String nodeId, int intervalMs, int times, boolean ignoreEx) throws Exception{
+    public ViewNode tryFindNodeById(String id, int intervalMs, int times, boolean ignoreEx) throws Exception{
     	ViewNode node = null;
         for (int i=0; i<times; i++){
         	try {
-            	node = this.findNodeById(nodeId);
+            	node = this.findNodeById(id);
             	if (node != null){
             		 return node;
             	}
@@ -561,9 +598,29 @@ public class HvHelper implements IFinds, ISearchContext{
 	public List<ViewNode> findNodes(By by) {
 		return by.findNodes((ISearchContext)this);
 	}
-    
-	public static void touch(String nodeId)  throws Exception{
-		// _mDevice.touch(By.id(nodeId), TouchPressType.DOWN_AND_UP);
+	
+	public boolean isNodeVisibility(ViewNode node) {
+		return _view.visible(node);
+	}
+	
+	public boolean isNodeVisibility(By by, Ref byRef) {
+		byRef.node = findNode(by);
+		return _view.visible(byRef.node);
+	}
+	
+	public void touch(int x, int y)  throws Exception{
+		// this._device.touch(x, y, TouchPressType.DOWN_AND_UP);	
+		_mgr.touch(x, y);	
+    }
+	
+	public void touch(ViewNode node)  throws Exception{
+		Point pos = HierarchyViewer.getAbsoluteCenterOfView(node);
+		touch(pos.x, pos.y);
+    }
+	
+	public void touch(By by)  throws Exception{
+		// _mDevice.touch(By.id(id), TouchPressType.DOWN_AND_UP);
+		touch(this.findNode(by));
     }
 	
 	public static void drag(int startx, int starty, int endx, int endy, int steps, long ms)  throws Exception{
