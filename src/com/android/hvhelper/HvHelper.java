@@ -7,6 +7,7 @@ import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -19,6 +20,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,6 +40,7 @@ import org.eclipse.swt.graphics.RGB;
 import com.android.chimpchat.ChimpManager;
 import com.android.chimpchat.adb.AdbBackend;
 import com.android.chimpchat.adb.AdbChimpDevice;
+import com.android.chimpchat.adb.LinearInterpolator;
 import com.android.chimpchat.adb.LoggingOutputReceiver;
 import com.android.chimpchat.core.ChimpImageBase;
 import com.android.chimpchat.core.IChimpImage;
@@ -86,9 +91,14 @@ public class HvHelper implements IFinds, ISearchContext{
 		public AdbChimpDeviceEx(IDevice device) {
 			super(device);
 		}
+		
+		@Override
+		public void drag(int startx, int starty, int endx, int endy, int steps, long ms) {
+			super.drag(startx, starty, endx, endy, steps, ms);
+		}
 	}
 	
-	private String _sn = null;
+	private String _sn = HvStr.NULL;
 	public AdbChimpDevice _device = null;
 	public static EasyMonkeyDevice _mDevice = null;
 	private AdbBackend _adb = null;
@@ -96,6 +106,7 @@ public class HvHelper implements IFinds, ISearchContext{
 	private static ChimpManagerEx _mgr = null;
 	public static IDevice _iDevice;
 	IHvDevice _ihvDevice = null;
+	private static final Logger LOG = Logger.getLogger(HvHelper.class.getName());
 	
 	public HvHelper(String sn) throws Exception{
 		this._sn = sn;
@@ -108,6 +119,7 @@ public class HvHelper implements IFinds, ISearchContext{
         _mDevice = new EasyMonkeyDevice(new MonkeyDevice(_device));
         
         // _mgr = _device.getManager();
+        // ChimpManager manager = new ChimpManagerEx(_device.getManager().monkeySocket);
         _mgr = new ChimpManagerEx(_device.getManager().monkeySocket);
         
 		/*InetAddress addr = InetAddress.getByName("127.0.0.1");
@@ -115,7 +127,7 @@ public class HvHelper implements IFinds, ISearchContext{
 		_mgr = new ChimpManagerEx(monkeySocket);*/
 		
         _view = _device.getHierarchyViewer();
-        _iDevice = getIDevice(_sn);
+        _iDevice = getIDevice();
         _ihvDevice = HvDeviceFactory.create(_iDevice);
         // _ihvDevice.initializeViewDebug();
 	}
@@ -128,13 +140,13 @@ public class HvHelper implements IFinds, ISearchContext{
         // AndroidDebugBridge.terminate();
     }
 	
-    private IDevice getIDevice(String sn) throws Exception{
+    private IDevice getIDevice() throws Exception{
         AndroidDebugBridge bridge = AndroidDebugBridge.createBridge();
         waitDevicesList(bridge);
         IDevice[] devices = bridge.getDevices();
 
         for (IDevice item : devices){
-            if (item.getSerialNumber() == sn)
+            if (_sn.equals(item.getSerialNumber()))
                 return item;
         }
 
@@ -199,6 +211,54 @@ public class HvHelper implements IFinds, ISearchContext{
 		}
 	}
 	
+	public <T> T actionTolerant(Callable<T> func){
+		try {
+			return func.call();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	public void actionTolerant(String id, ViewNode node, BiFunction<String, ViewNode, ViewNode> func){
+		try {
+			func.apply(id, node);
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+	}
+	
+	public void actionTolerant(String value, Function<String, ViewNode> func){
+		/*Function<String, ViewNode> func = id -> _view.findViewById(id);
+		actionTolerant("id", func);*/
+		try {
+			func.apply(value);
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+	}
+	
+	public <T> T faultTolerant(Supplier<T> func){
+		/*Supplier<ViewNode> sup = () -> _view.findViewById("id");
+		actionTolerant(sup);*/
+		try {
+			return func.get();
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	public void actionTolerant(Method method, Object classInstance, Object[] parameters) throws Exception {
+		/*Class[] paramTypes = new Class[1];
+        paramTypes[0] = String.class;
+		Method methodName = this.getClass().getMethod("methodName", paramTypes);*/		
+		
+        method.invoke(classInstance, parameters);
+    }
+	
     public Window getFocusedWindow(){
         // return DeviceBridge.loadWindows(ihvDevice, iDevice)[DeviceBridge.getFocusedWindow(iDevice)];
         return getWindow(_view.getFocusedWindowName(), CompType.Equals); // 待解决：未考虑多个窗体名一样的情况
@@ -208,7 +268,7 @@ public class HvHelper implements IFinds, ISearchContext{
         return DeviceBridge.loadWindowData(new Window(new ViewServerDevice(_iDevice), "", -1)); // 0xffffffff
     }
 	
-	private static Window getWindow(String windowName, CompType ct) {
+    public static Window getWindow(String windowName, CompType ct) {
         IDevice iDevice = null;	
         iDevice = getDevice(0);
         System.out.println(String.format("IDevice Name = 【%s】", iDevice.getName()) );
@@ -442,7 +502,7 @@ public class HvHelper implements IFinds, ISearchContext{
     	List<ViewNode> outNodes = new ArrayList<>();        
     	findNodesByMaps( parNode, locMaps, 0, outNodes);
         return outNodes;
-    }    
+    }
 	
     public ViewNode findNodeByPpy(String expcVal,  ViewNode parNode, P ppyName, CompType ct){
     	// this.left = this.namedProperties.containsKey("mLeft") ? this.getInt("mLeft", 0) : this.getInt("layout:mLeft", 0);
@@ -504,11 +564,19 @@ public class HvHelper implements IFinds, ISearchContext{
     }
     
     public ViewNode findNodeById(String id) {
-    	return _view.findViewById(id);
+		/*return actionTolerant(new Callable<ViewNode>(){
+			public ViewNode call(){
+				return _view.findViewById(id);
+			}
+		});*/
+    	
+		/*Supplier<ViewNode> sup = () -> _view.findViewById(id);
+		return faultTolerant(sup);*/
+    	return faultTolerant(() -> _view.findViewById(id));
     }
 
     public ViewNode findNodeById(String id, ViewNode parNode){
-        return _view.findViewById(id, parNode);
+    	return faultTolerant(() -> _view.findViewById(id, parNode));
     }
     
     public ViewNode findNodeById( String id, String windowName){
@@ -599,6 +667,10 @@ public class HvHelper implements IFinds, ISearchContext{
 		return by.findNodes((ISearchContext)this);
 	}
 	
+	public Collection<String> getViewIdList() {
+		return this._device.getViewIdList();
+	}
+	
 	public boolean isNodeVisibility(ViewNode node) {
 		return _view.visible(node);
 	}
@@ -623,7 +695,11 @@ public class HvHelper implements IFinds, ISearchContext{
 		touch(this.findNode(by));
     }
 	
-	public static void drag(int startx, int starty, int endx, int endy, int steps, long ms)  throws Exception{
+	public void drag(int startx, int starty, int endx, int endy, int steps, long ms)  throws Exception{
+		// this._device.drag(startx, starty, endx, endy, steps, ms);
+		
+		/*LOG.log(Level.INFO, String.format("【%d,%d】->【%d,%d】", startx, starty, endx, endy));
+		this._device.drag(startx, starty, endx, endy, steps, ms);
         final long iterationTime = ms / steps;
         int stepDisX = (endx-startx)/steps;
         int stepDisY = (endy-starty)/steps;
@@ -633,8 +709,54 @@ public class HvHelper implements IFinds, ISearchContext{
         	_mgr.touchMove(stepDisX, stepDisY);
         	Thread.sleep(iterationTime);
         }
-        _mgr.touchUp(endx, endy);
+        _mgr.touchUp(endx, endy);*/
+        
+        final long iterationTime = ms / steps;
+        LinearInterpolator lerp = new LinearInterpolator(steps);
+        LinearInterpolator.Point start = new LinearInterpolator.Point(startx, starty);
+        LinearInterpolator.Point end = new LinearInterpolator.Point(endx, endy);
+        lerp.interpolate(start, end, new LinearInterpolator.Callback() {
+              public void step(LinearInterpolator.Point point) {
+                try {
+                	_mgr.touchMove(point.getX(), point.getY());
+                } catch (IOException e) {
+                  LOG.log(Level.SEVERE, "Error sending drag start event", e);
+                } 
+                try {
+                  Thread.sleep(iterationTime);
+                } catch (InterruptedException e) {
+                  LOG.log(Level.SEVERE, "Error sleeping", e);
+                } 
+              }
+              
+              public void start(LinearInterpolator.Point point) {
+                try {
+                	_mgr.touchDown(point.getX(), point.getY());
+                	_mgr.touchMove(point.getX(), point.getY());
+                } catch (IOException e) {
+                  LOG.log(Level.SEVERE, "Error sending drag start event", e);
+                } 
+                try {
+                  Thread.sleep(iterationTime);
+                } catch (InterruptedException e) {
+                  LOG.log(Level.SEVERE, "Error sleeping", e);
+                } 
+              }
+              
+              public void end(LinearInterpolator.Point point) {
+                try {
+                	_mgr.touchMove(point.getX(), point.getY());
+                	_mgr.touchUp(point.getX(), point.getY());
+                } catch (IOException e) {
+                  LOG.log(Level.SEVERE, "Error sending drag end event", e);
+                } 
+              }
+            });
     }
+	
+	public String shell(String cmd){
+		return this._device.shell(cmd);
+	}
 	
 	public class ChimpImageEx extends ChimpImageBase{
 		BufferedImage bi;

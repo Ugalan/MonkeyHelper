@@ -26,9 +26,12 @@ import com.android.hierarchyviewerlib.device.IHvDevice;
 import com.android.hierarchyviewerlib.models.ViewNode;
 import com.android.hierarchyviewerlib.models.ViewNode.Property;
 import com.android.hvhelper.By;
+import com.android.hvhelper.CompType;
 import com.android.hvhelper.HvHelper;
 import com.android.hvhelper.Id;
+import com.android.hvhelper.NodeLocInfo;
 import com.android.hvhelper.NodeLocMap;
+import com.android.hvhelper.P;
 import com.android.hvhelper.Ref;
 import com.android.hierarchyviewerlib.models.Window;
 
@@ -38,14 +41,21 @@ public class Main{
 		/*BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         String line = "";
         while(null != (line = br.readLine())) {
-         }*/        
+         }*/ 		
+		
 		hvh = new HvHelper("127.0.0.1:21503"); // åÐÒ£Ä£ÄâÆ÷
-		Ref byRef = new Ref();
+		ViewNode node = hvh.findNodeById(Id.showToastButton);
+		// List<ViewNode> node = hvh.findNodes(By.id("id/text1"));
+		// Collection<String> col = hvh.getViewIdList();
+		Thread.sleep(100);
+		
+		
+		/*Ref byRef = new Ref();
 		// ViewNode node = null;
 		// node = hvh.findNode(By.id(Id.showToastButton));
 		if (hvh.isNodeVisibility(By.id(Id.showToastButton), byRef)){
 			hvh.touch(byRef.node);
-		}
+		}*/
 		
 		// NodeLocMap locMap_00 = new NodeLocMap();
 		
@@ -57,7 +67,8 @@ public class Main{
 		
 		// ViewNode node = hvh.findNode(By.text("Displays a Toast"));
 		// System.out.println(node.id);
-		/*ViewNode node = hvh.findNodeById(Id.list);
+		
+		/*ViewNode node = hvh.findNodeById(Id.list); // API Demos
 		NodeLocInfo locInfo_00_Id = new NodeLocInfo(Id.list, P.mID, CompType.Equals);
 		NodeLocInfo locInfo_01_Id = new NodeLocInfo(Id.text1, P.mID, CompType.Equals);
 		// NodeLocInfo locInfo_01_Text = new NodeLocInfo("Media", P.text_mText, CompType.Equals);
@@ -72,9 +83,10 @@ public class Main{
 		List<NodeLocMap> locMaps = new ArrayList<>();
 		locMaps.add(locMap_00);
 		locMaps.add(locMap_01);
+		// locMaps = new ArrayList<>(Arrays.asList(locMap_00, locMap_01));
 		List<ViewNode> outNodes = hvh.findNodesByMaps(node, locMaps);
-		
 		System.out.println(outNodes.size());*/
+		
         System.out.println("________________________________________________TEST PASS______________________________________________________");
     }
 	
