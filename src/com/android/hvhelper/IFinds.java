@@ -9,7 +9,7 @@ public interface IFinds {
 	ViewNode findNodeById(String id, String windowName);
 	ViewNode findNodeById(String id, String parId, String windowName);
 	ViewNode findNodeById(String id, String locId, int parNum);
-	ViewNode findNodeById(String id, String text, int parNum, CompType textCt);
+	ViewNode findNodeById(String id, String text, int parNum, CompType ct);
 	ViewNode findNodeByText(String text);
 	List<ViewNode> findNodesById(String id);
 }

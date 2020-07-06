@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -241,7 +242,7 @@ public class HvHelper implements IFinds, ISearchContext{
 	
 	public <T> T faultTolerant(Supplier<T> func){
 		/*Supplier<ViewNode> sup = () -> _view.findViewById("id");
-		actionTolerant(sup);*/
+		faultTolerant(sup);*/
 		try {
 			return func.get();
 		} catch (Exception e){
@@ -257,6 +258,54 @@ public class HvHelper implements IFinds, ISearchContext{
 		Method methodName = this.getClass().getMethod("methodName", paramTypes);*/		
 		
         method.invoke(classInstance, parameters);
+    }
+	
+	static <T> Consumer<T> consumerWrapper(
+            ThrowingConsumer<T, Exception> throwingConsumer) {
+        return i -> {
+            try {
+                throwingConsumer.accept(i);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        };
+    }
+	
+	static <T, E extends Exception> Consumer<T> consumerWrapper(
+            ThrowingConsumer<T, E> throwingConsumer, Class<E> exceptionClass) {
+        return i -> {
+            try {
+                throwingConsumer.accept(i);
+            } catch (Exception ex) {
+                try {
+                    E exCast = exceptionClass.cast(ex);
+                    System.err.println("Exception occured : " + exCast.getMessage());
+                } catch (ClassCastException ccEx) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        };
+    }
+	
+    @FunctionalInterface
+    public interface Supplier_WithExceptions<T, E extends Exception> {
+        T get() throws E;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void throwAsUnchecked(Exception exception) throws E {
+        throw (E) exception;
+    }
+	
+	public static <T, E extends Exception> Supplier<T> reThrowSupplier(Supplier_WithExceptions<T, E> function) throws E {
+        return () -> {
+            try {
+                return function.get();
+            } catch (Exception exception) {
+                throwAsUnchecked(exception);
+            }
+            return null;
+        };
     }
 	
     public Window getFocusedWindow(){
@@ -600,8 +649,8 @@ public class HvHelper implements IFinds, ISearchContext{
     	return findNodeById(id, parNode);
     }
     
-    public ViewNode findNodeById(String id, String text, int parNum, CompType textCt){
-    	ViewNode parNode = findNodeByPpy(text, P.text_mText, textCt);
+    public ViewNode findNodeById(String id, String text, int parNum, CompType ct){
+    	ViewNode parNode = findNodeByPpy(text, P.text_mText, ct);
     	
     	for (int i=0; i<parNum; i++){
     		parNode = parNode.parent;
@@ -682,7 +731,10 @@ public class HvHelper implements IFinds, ISearchContext{
 	
 	public void touch(int x, int y)  throws Exception{
 		// this._device.touch(x, y, TouchPressType.DOWN_AND_UP);	
-		_mgr.touch(x, y);	
+		// _mgr.touch(x, y);
+		// consumerWrapper((x2, y2) -> _mgr.touch(x, y));
+		// faultTolerant(() -> _mgr.touch(x, y));
+		reThrowSupplier(() -> _mgr.touch(x, y));
     }
 	
 	public void touch(ViewNode node)  throws Exception{
